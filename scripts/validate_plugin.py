@@ -617,8 +617,6 @@ def scan_placeholders(root: Path, report: Report) -> None:
         if any(part in EXCLUDED_PARTS for part in path.parts):
             continue
         relative = path.relative_to(root)
-        if relative.as_posix() == "prompt.txt":
-            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
