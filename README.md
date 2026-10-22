@@ -1,5 +1,7 @@
 # TechLead
 
+[![skills.sh](https://skills.sh/b/rmsaitam/skill-tech-lead)](https://skills.sh/rmsaitam/skill-tech-lead)
+
 TechLead is a planning plugin for AI coding agents. It interviews the user about a product idea, captures every decision, and produces two traceable artifacts:
 
 - `PRD.md`: the product requirements document, including the interview answers.
@@ -22,6 +24,20 @@ Repository: https://github.com/rmsaitam/skill-tech-lead
 All agents use the shared skill at `skills/techlead/SKILL.md` and the commands in `commands/`.
 
 ## Install
+
+### skills.sh
+
+The recommended way to install the skill across supported agents:
+
+```bash
+npx skills add rmsaitam/skill-tech-lead
+```
+
+The CLI prompts for the target agents. Node.js 22.20 or newer is required. List the available skill without installing:
+
+```bash
+npx skills add rmsaitam/skill-tech-lead --list
+```
 
 ### Claude Code
 
