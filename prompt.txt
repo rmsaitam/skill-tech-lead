@@ -1,0 +1,6 @@
+Criar uma skill TechLead que possa ser instalada como plugin nos agentes de IA (Codex, Claude Code, Antigravity, GitHub Copilot, Cursor)
+A skill TechLead é fazer um brainstorming da ideia informada e gera o PRD.md com as respostas das perguntas e o TASKS.md que são as tarefas na ordem do PRD.md
+Considere definição de pronto com as tasks finalizadas de acordo com o escopo definido e cobertura de testes >= 80%
+O projeto deve ser dockernizado com versão para testes (ambiente local) e produção (ambiente VPS com otimização e seguro).
+
+Escrever o README.md e a implementação em inglês para ser aceito a instalação aos agentes de IA mencionado e atingir de forma global.
