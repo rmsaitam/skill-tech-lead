@@ -64,5 +64,6 @@ share/python-wheels/
 *.tmp
 *.temp
 
-# uv local state
+# uv local state and lockfile
 .uv/
+uv.lock

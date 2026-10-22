@@ -190,7 +190,7 @@ Prerequisites:
 - `uv` for the test environment.
 - Docker when testing generated projects.
 
-The published plugin has no Python runtime dependencies. Its validators use only the standard library, so end users do not need to create a virtual environment. For development, `uv` creates and manages an isolated `.venv` from `pyproject.toml` and `uv.lock`:
+The published plugin has no Python runtime dependencies. Its validators use only the standard library, so end users do not need to create a virtual environment. For development, `uv` creates and manages an isolated `.venv` from `pyproject.toml` and resolves the lockfile locally (not committed):
 
 ```bash
 uv sync --extra dev
