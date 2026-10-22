@@ -1,0 +1,16 @@
+{
+  "name": "techlead",
+  "owner": {
+    "name": "TechLead contributors"
+  },
+  "metadata": {
+    "description": "TechLead planning skill for AI coding agents."
+  },
+  "plugins": [
+    {
+      "name": "techlead",
+      "source": ".",
+      "description": "Turns a product idea into a traceable PRD.md and ordered TASKS.md with Docker environments and a test coverage gate of at least 80 percent."
+    }
+  ]
+}

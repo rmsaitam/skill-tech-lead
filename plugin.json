@@ -1,0 +1,5 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "techlead",
+  "description": "Turns a product idea into a traceable PRD.md and ordered TASKS.md with Docker environments and a test coverage gate of at least 80 percent."
+}

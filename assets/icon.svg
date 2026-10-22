@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TechLead">
+  <rect width="512" height="512" rx="112" fill="#0F766E"/>
+  <path d="M132 138h248v64H300v190h-88V202H132z" fill="#FFFFFF"/>
+  <circle cx="376" cy="376" r="52" fill="#14B8A6"/>
+  <path d="M352 376l17 17 32-34" fill="none" stroke="#042F2E" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

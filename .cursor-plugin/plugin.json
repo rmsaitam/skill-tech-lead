@@ -1,0 +1,25 @@
+{
+  "name": "techlead",
+  "version": "0.1.0",
+  "description": "Turns a product idea into a traceable PRD.md and ordered TASKS.md with Docker environments and a test coverage gate of at least 80 percent.",
+  "author": {
+    "name": "TechLead contributors",
+    "url": "https://github.com/rmsaitam/skill-tech-lead"
+  },
+  "homepage": "https://github.com/rmsaitam/skill-tech-lead",
+  "repository": "https://github.com/rmsaitam/skill-tech-lead",
+  "license": "MIT",
+  "keywords": [
+    "tech-lead",
+    "product-management",
+    "prd",
+    "task-breakdown",
+    "planning",
+    "docker",
+    "definition-of-done",
+    "software-engineering"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "logo": "assets/logo.svg"
+}

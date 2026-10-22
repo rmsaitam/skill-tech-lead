@@ -1,0 +1,4 @@
+interface:
+  display_name: "TechLead"
+  short_description: "Turn an idea into a PRD and an ordered task plan"
+  default_prompt: "Use $techlead to interview me and produce PRD.md and TASKS.md."
