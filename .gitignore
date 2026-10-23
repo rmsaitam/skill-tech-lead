@@ -67,6 +67,3 @@ share/python-wheels/
 # uv local state and lockfile
 .uv/
 uv.lock
-
-# Local scratch notes
-prompt.txt
