@@ -30,7 +30,11 @@ All agents use the shared skill at `skills/techlead/SKILL.md` and the commands i
 The recommended way to install the skill across supported agents:
 
 ```bash
+# Install into the current project after choosing the agents interactively
 npx skills add rmsaitam/skill-tech-lead
+
+# Install globally into the user home config for every project, skipping prompts
+npx skills add rmsaitam/skill-tech-lead -g -y
 ```
 
 The CLI prompts for the target agents. Node.js 22.20 or newer is required. List the available skill without installing:
