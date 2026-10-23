@@ -41,18 +41,27 @@ REQUIRED_FILES = (
     "assets/logo.svg",
     "commands/techlead.md",
     "commands/techlead-validate.md",
+    "commands/techlead-issues.md",
     "skills/techlead/SKILL.md",
     "skills/techlead/references/question-bank.md",
     "skills/techlead/references/prd-template.md",
+    "skills/techlead/references/spec-template.md",
+    "skills/techlead/references/plan-template.md",
     "skills/techlead/references/tasks-template.md",
+    "skills/techlead/references/issue-format.md",
+    "skills/techlead/references/agents-template.md",
+    "skills/techlead/references/readme-template.md",
     "skills/techlead/references/docker-baseline.md",
     "skills/techlead/references/testing-baseline.md",
     "skills/techlead/references/validation-checklist.md",
+    "skills/techlead/scripts/artifact_model.py",
     "skills/techlead/scripts/validate_artifacts.py",
+    "skills/techlead/scripts/export_issues.py",
     "scripts/validate_plugin.py",
     "tests/conftest.py",
     "tests/test_validate_artifacts.py",
     "tests/test_validate_plugin.py",
+    "tests/test_export_issues.py",
     "README.md",
     "LICENSE",
     "pyproject.toml",
@@ -508,9 +517,22 @@ def check_skill(root: Path, report: Report, version: str) -> None:
         target = (root / relative).parent / link
         if not target.exists():
             report.error("missing-reference", f"{relative} references missing {link}.", relative)
-    for required in ("validate_artifacts.py", "80 percent", "Docker", "TASKS.md", "PRD.md"):
+    for required in (
+        "validate_artifacts.py",
+        "export_issues.py",
+        "80 percent",
+        "Docker",
+        "TASKS.md",
+        "PRD.md",
+        "SPEC.md",
+        "PLAN.md",
+        "AGENTS.md",
+        "README.md",
+    ):
         if required not in text:
             report.error("missing-skill-content", f"{relative} must mention {required}.", relative)
+    if "milestone" not in text.lower():
+        report.error("missing-skill-content", f"{relative} must mention milestones.", relative)
 
 
 def check_openai_yaml(root: Path, report: Report) -> None:
@@ -563,11 +585,27 @@ def check_command(root: Path, relative: str, report: Report, expected_text: str)
 def check_commands(root: Path, report: Report) -> None:
     check_command(root, "commands/techlead.md", report, "Do not start implementation")
     check_command(root, "commands/techlead-validate.md", report, "validate_artifacts.py")
+    check_command(root, "commands/techlead-issues.md", report, "export_issues.py")
 
 
 def check_docs(root: Path, report: Report, version: str) -> None:
     readme = read_text(root / "README.md", report)
-    for required in ("TechLead", "Install", "PRD.md", "TASKS.md", "Docker", "80 percent", "MIT", "validate_artifacts.py"):
+    for required in (
+        "TechLead",
+        "Install",
+        "PRD.md",
+        "SPEC.md",
+        "PLAN.md",
+        "TASKS.md",
+        "AGENTS.md",
+        "README.md",
+        "Docker",
+        "80 percent",
+        "MIT",
+        "validate_artifacts.py",
+        "export_issues.py",
+        "Milestone",
+    ):
         if required not in readme:
             report.error("missing-readme-content", f"README.md must mention {required}.", "README.md")
     license_text = read_text(root / "LICENSE", report)

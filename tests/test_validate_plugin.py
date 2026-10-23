@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -33,7 +34,7 @@ def copy_plugin(tmp_path: Path) -> Path:
 def test_real_plugin_passes() -> None:
     report = validate_plugin(ROOT)
     assert report.ok, [issue.message for issue in report.errors]
-    assert report.stats["version"] == "0.1.0"
+    assert report.stats["version"] == "0.2.0"
     assert not report.warnings
 
 
@@ -43,7 +44,7 @@ def test_cli_json_pass(capsys) -> None:
     payload = json.loads(captured.out)
     assert exit_code == 0
     assert payload["status"] == "pass"
-    assert payload["stats"]["version"] == "0.1.0"
+    assert payload["stats"]["version"] == "0.2.0"
 
 
 def test_cli_strict_fails_on_placeholder_url(tmp_path, capsys) -> None:
@@ -86,7 +87,7 @@ def test_root_manifest_extra_key(tmp_path) -> None:
     plugin = copy_plugin(tmp_path)
     path = plugin / "plugin.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    data["version"] = "0.1.0"
+    data["version"] = "0.2.0"
     path.write_text(json.dumps(data), encoding="utf-8")
     report = validate_plugin(plugin)
     assert any(issue.code == "root-extra-key" for issue in report.errors)
@@ -173,12 +174,12 @@ def test_placeholder_in_inline_code_is_ignored(tmp_path) -> None:
 
 def test_parse_frontmatter_reads_nested_metadata() -> None:
     values = parse_frontmatter(
-        '---\nname: techlead\ndescription: A useful description\nlicense: MIT\nmetadata:\n  author: Example\n  version: "0.1.0"\n---\n\nBody\n'
+        '---\nname: techlead\ndescription: A useful description\nlicense: MIT\nmetadata:\n  author: Example\n  version: "0.2.0"\n---\n\nBody\n'
     )
     assert values is not None
     assert values["name"] == "techlead"
     assert values["author"] == "Example"
-    assert values["version"] == "0.1.0"
+    assert values["version"] == "0.2.0"
 
 
 @pytest.mark.parametrize(
@@ -387,8 +388,8 @@ def test_skill_rejects_weak_description_and_version(tmp_path) -> None:
     plugin = copy_plugin(tmp_path)
     path = plugin / "skills/techlead/SKILL.md"
     text = path.read_text(encoding="utf-8")
-    text = text.replace("description: Run a structured brainstorming interview for a product idea and produce a traceable PRD.md plus an ordered TASKS.md. Use when the user asks for a tech lead, product requirements, project planning, task breakdown, a PRD, an implementation plan, or wants to turn an idea into executable engineering work with Docker environments and a test coverage gate of at least 80 percent.", "description: Short.")
-    text = text.replace('version: "0.1.0"', 'version: "9.9.9"')
+    text = re.sub(r"(?m)^description:.*$", "description: Short.", text)
+    text = text.replace('version: "0.2.0"', 'version: "9.9.9"')
     path.write_text(text, encoding="utf-8")
     report = validate_plugin(plugin)
     codes = {issue.code for issue in report.errors}

@@ -122,6 +122,43 @@ Do not read the entire bank to the user. Select the next questions that reduce t
 - Which dependency is most likely to fail?
 - What would make the team stop or reshape the project?
 
+## Round 5: Milestones, issues, and project memory
+
+### Launch strategy
+
+- What is the first release: internal demo, private beta, public beta, or general availability?
+- What is the smallest release that proves the product promise?
+- Should the rollout use feature flags, canary, blue-green, or a staged percentage?
+- What are the go/no-go criteria, and who signs them?
+- What triggers a rollback, and what is the maximum acceptable downtime?
+- Which metrics are reviewed after launch, and when?
+- Who supports users during and after launch?
+
+### Milestones
+
+- Which user-visible outcomes should become milestones?
+- How many milestones are enough to reach the first useful release?
+- What is the exit criteria and evidence for each milestone?
+- Which milestones depend on external systems, credentials, or approvals?
+- What is the target window for each milestone?
+
+### Issue automation
+
+- Is the issue tracker GitHub, GitLab, or both?
+- Which repository or project receives the issues?
+- Which label taxonomy should be used for type, area, priority, and size?
+- Are issue titles prefixed with the task ID?
+- Which issue fields are mandatory for the team?
+- Who may run the issue export, and is explicit approval always required?
+
+### Project memory
+
+- Which commands must every contributor and AI agent run before opening a pull request?
+- Which conventions are non-negotiable for branches, commits, and reviews?
+- What should `AGENTS.md` tell an AI agent to avoid damaging the project?
+- What should the `README.md` show a new contributor in the first five minutes?
+- Which existing README or AGENTS content must be preserved?
+
 ## Decision rules
 
 - Prefer measurable answers over adjectives. Replace "fast" with a latency and percentile. Replace "secure" with a threat and control. Replace "many users" with a volume and growth assumption.
@@ -151,4 +188,9 @@ Record an answer or an explicit non-applicability note for:
 - local/test Docker approach;
 - production/VPS approach;
 - deployment, rollback, backup, and monitoring;
+- launch strategy and milestone outcomes;
+- issue tracker, labels, and issue automation rules;
+- AGENTS.md and README.md expectations;
 - risks and open decisions.
+
+The PRD records product answers. The SPEC records architecture and engineering answers. The PLAN records launch and milestone decisions. The TASKS record atomic execution and issue metadata. The AGENTS and README record project memory and onboarding.

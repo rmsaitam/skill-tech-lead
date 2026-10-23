@@ -1,7 +1,7 @@
 {
   "name": "techlead",
-  "version": "0.1.0",
-  "description": "Turns a product idea into a traceable PRD.md and ordered TASKS.md with Docker environments and a test coverage gate of at least 80 percent.",
+  "version": "0.2.0",
+  "description": "Turns a product idea into PRD, SPEC, PLAN, TASKS, AGENTS, and README with milestones, issue-ready tasks, Docker environments, and a test coverage gate of at least 80 percent.",
   "author": {
     "name": "TechLead contributors",
     "url": "https://github.com/rmsaitam/skill-tech-lead"
@@ -13,7 +13,14 @@
     "tech-lead",
     "product-management",
     "prd",
+    "spec",
+    "roadmap",
+    "milestones",
     "task-breakdown",
+    "issue-automation",
+    "github-issues",
+    "gitlab",
+    "agents",
     "planning",
     "docker",
     "definition-of-done",

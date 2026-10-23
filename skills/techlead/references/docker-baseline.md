@@ -1,6 +1,6 @@
 # Docker Baseline
 
-Use this reference when writing the Docker and environments section of the PRD and the Docker tasks in TASKS. Adapt the commands and services to the selected stack. The requirements are mandatory; the examples are illustrative.
+Use this reference when writing the environments and Docker sections of the SPEC and the Docker tasks in TASKS. Adapt the commands and services to the selected stack. The requirements are mandatory; the examples are illustrative.
 
 ## Local and test environment
 

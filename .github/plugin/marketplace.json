@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "TechLead planning skill for AI coding agents.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "techlead",
-      "description": "Turns a product idea into a traceable PRD.md and ordered TASKS.md with Docker environments and a test coverage gate of at least 80 percent.",
-      "version": "0.1.0",
+      "description": "Turns a product idea into PRD, SPEC, PLAN, TASKS, AGENTS, and README with milestones, issue-ready tasks, Docker environments, and a test coverage gate of at least 80 percent.",
+      "version": "0.2.0",
       "source": "."
     }
   ]

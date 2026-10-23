@@ -1,7 +1,7 @@
 {
   "name": "techlead",
-  "version": "0.1.0",
-  "description": "Turns a product idea into a traceable PRD.md and ordered TASKS.md with Docker environments and a test coverage gate of at least 80 percent.",
+  "version": "0.2.0",
+  "description": "Turns a product idea into PRD, SPEC, PLAN, TASKS, AGENTS, and README with milestones, issue-ready tasks, Docker environments, and a test coverage gate of at least 80 percent.",
   "author": {
     "name": "TechLead contributors",
     "url": "https://github.com/rmsaitam/skill-tech-lead"
@@ -13,7 +13,14 @@
     "tech-lead",
     "product-management",
     "prd",
+    "spec",
+    "roadmap",
+    "milestones",
     "task-breakdown",
+    "issue-automation",
+    "github-issues",
+    "gitlab",
+    "agents",
     "planning",
     "docker",
     "definition-of-done",
@@ -22,8 +29,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "TechLead",
-    "shortDescription": "Turn an idea into a PRD and an ordered task plan",
-    "longDescription": "Run a structured brainstorming interview, capture every decision, and produce PRD.md plus TASKS.md. The generated plan includes local and production Docker environments, security hardening, and a definition of done that requires at least 80 percent test coverage.",
+    "shortDescription": "Turn an idea into a complete, issue-ready engineering plan",
+    "longDescription": "Run a structured brainstorming interview, capture every decision, and produce PRD.md, SPEC.md, PLAN.md, TASKS.md, AGENTS.md, and README.md. The plan includes launch milestones, GitHub and GitLab issue automation, local and production Docker environments, security hardening, and a definition of done that requires at least 80 percent test coverage.",
     "developerName": "TechLead contributors",
     "category": "Developer Tools",
     "capabilities": [
@@ -33,9 +40,10 @@
     ],
     "websiteURL": "https://github.com/rmsaitam/skill-tech-lead",
     "defaultPrompt": [
-      "Turn this idea into PRD.md and TASKS.md with TechLead",
-      "Interview me and write a product requirements document",
-      "Validate my PRD.md and TASKS.md"
+      "Turn this idea into PRD.md, SPEC.md, PLAN.md, TASKS.md, AGENTS.md, and README.md with TechLead",
+      "Interview me and write a product requirements document plus an engineering specification",
+      "Break my milestones into issue-ready tasks for GitHub or GitLab",
+      "Validate my TechLead planning artifacts"
     ],
     "brandColor": "#0F766E",
     "composerIcon": "./assets/icon.svg",

@@ -1,16 +1,17 @@
 # PRD Template
 
-Copy this structure into `PRD.md`. Replace every prompt with the approved answer. Preserve every HTML marker exactly. The prose may be translated; marker IDs and requirement IDs stay in English.
+Copy this structure into `PRD.md`. The PRD is the product and business source of truth. It must not contain architecture, Docker, or implementation detail; those belong in `SPEC.md`.
+
+Preserve every HTML marker exactly. Replace every prompt with the approved answer. The prose may be translated; marker IDs, requirement IDs, and marker attributes stay in English.
 
 ```markdown
-<!-- techlead:artifact type=prd version=1 -->
+<!-- techlead:artifact type=prd version=2 -->
 # PRD: Project Name
 
 - Status: Approved
 - Date: YYYY-MM-DD
 - Owner: Name or team
 - Artifact language: English
-- Coverage gate: >= 80%
 
 <!-- techlead:section id=summary -->
 ## 1. Executive Summary
@@ -18,7 +19,7 @@ Copy this structure into `PRD.md`. Replace every prompt with the approved answer
 One paragraph describing the product, the user, the problem, and the promised outcome.
 
 <!-- techlead:section id=problem -->
-## 2. Problem and Goals
+## 2. Problem and Product Promise
 
 ### Problem
 
@@ -28,14 +29,9 @@ Describe the current pain, who feels it, and the cost of leaving it unsolved.
 
 State the single outcome the product guarantees when it succeeds.
 
-### Goals
+### Why now
 
-- Goal 1 with a measurable target.
-- Goal 2 with a measurable target.
-
-### Non-goals
-
-- Outcome this product will not pursue in this release.
+Explain why this is worth solving now and what happens if the team does nothing.
 
 <!-- techlead:section id=users -->
 ## 3. Users and Jobs to Be Done
@@ -71,136 +67,82 @@ Describe what users do today and why it is insufficient.
 
 - Capability intentionally postponed, with the condition that would bring it back.
 
+<!-- techlead:section id=success -->
+## 5. Success Metrics
+
+- Primary measurable outcome, target value, and measurement window.
+- Adoption or engagement metric with a target.
+- Quality or satisfaction metric with a target.
+- Metric that must not get worse.
+- How and when the team will review the result after launch.
+
 <!-- techlead:section id=functional -->
-## 5. Functional Requirements
+## 6. Functional Requirements
 
 - **FR-001**: The actor can perform an action and observes a specific result.
 - **FR-002**: The system validates a condition and returns a defined response.
 - **FR-003**: The operator can perform an administrative action with the required audit trail.
 
+Every FR states the actor, the action, and the observable outcome.
+
 <!-- techlead:section id=nonfunctional -->
-## 6. Non-Functional Requirements
+## 7. Non-Functional Requirements
 
-- **NFR-001**: Performance. Target value, percentile, and measurement method.
-- **NFR-002**: Availability. Target, measurement window, and recovery expectation.
-- **NFR-003**: Security. Threat, control, and verification method.
-- **NFR-004**: Accessibility. Standard, target level, and verification method.
-- **NFR-005**: Observability. Required logs, metrics, traces, and alerts.
+- **NFR-001**: Availability. Target uptime, measurement window, and recovery expectation.
+- **NFR-002**: Performance. User-visible latency target, percentile, and measurement method.
+- **NFR-003**: Privacy and compliance. Data classification, retention, and applicable regulation.
+- **NFR-004**: Accessibility. Standard, target level, and verification expectation.
+- **NFR-005**: Supportability. Maximum acceptable incident response time and support window.
 
-<!-- techlead:section id=assumptions -->
-## 7. Assumptions and Constraints
+NFRs describe business or quality constraints. Technical mechanisms belong in `SPEC.md`.
+
+<!-- techlead:section id=constraints -->
+## 8. Constraints and Assumptions
+
+### Constraints
+
+- Budget, deadline, contractual, regulatory, or team constraint.
+- Mandated platform, vendor, or integration.
+- Production environment expectation, such as a VPS, region, domain, or TLS requirement.
 
 ### Assumptions
 
 - Assumption that must remain true for the plan to hold.
 
-### Constraints
-
-- Technical, budget, deadline, contractual, or team constraint.
-
 ### Dependencies
 
 - External system, team, credential, or decision required before delivery.
 
-<!-- techlead:section id=architecture -->
-## 8. Solution and Architecture
+<!-- techlead:section id=assumptions -->
+## 9. Open Decisions and Risks
 
-### Proposed stack
+### Open decisions
 
-- Language, framework, runtime, database, and key libraries with versions where known.
+- Decision still required, the owner, and the deadline.
 
-### Components
+### Product risks
 
-- Component, responsibility, interface, and owner.
-
-### Data model
-
-- Main entities, relationships, retention, and source of truth.
-
-### Primary flow
-
-1. User action.
-2. Validation and authorization.
-3. State change and persistence.
-4. Observable result.
-
-### Failure behavior
-
-- Timeout, retry, duplicate input, partial failure, and recovery behavior.
-
-<!-- techlead:section id=security -->
-## 9. Security, Privacy, and Compliance
-
-- Authentication method and session lifecycle.
-- Authorization roles and least-privilege rules.
-- Sensitive data classification and retention.
-- Input validation and output encoding.
-- Secret storage and rotation.
-- Audit logging and prohibited log fields.
-- Backup, restore, and incident response.
-- Applicable regulation or contractual control.
-
-<!-- techlead:section id=docker -->
-## 10. Docker and Environments
-
-<!-- techlead:env id=local -->
-### Local and test environment
-
-- Development image and Compose service.
-- Hot reload or fast rebuild strategy.
-- Test service and coverage command.
-- Local database, cache, or other dependencies.
-- Seed data and reset procedure.
-- Healthchecks and startup order.
-- One command to start the stack and one command to run tests.
-
-<!-- techlead:env id=production -->
-### Production environment (VPS)
-
-- Multi-stage production image and pinned base image versions.
-- Non-root runtime user, minimal image, and read-only filesystem where possible.
-- Capability drop, no-new-privileges, and resource limits.
-- Runtime secret injection and secret rotation.
-- Reverse proxy, TLS, secure headers, and domain.
-- Host hardening, firewall, SSH policy, and security updates.
-- Healthchecks, restart policy, log rotation, metrics, and alerts.
-- Backup, restore, image scanning, deployment, smoke test, and rollback.
-
-<!-- techlead:section id=testing -->
-## 11. Testing Strategy
-
-- Coverage gate: >= 80 percent. This gate is mandatory.
-- Unit tests: scope, framework, and command.
-- Integration tests: scope, dependencies, and command.
-- End-to-end tests: critical journeys, environment, and command.
-- Contract tests: external interfaces and command.
-- Performance tests: target, load profile, and command.
-- Accessibility tests: standard, pages, and command.
-- Coverage command: exact command used by CI.
-- CI gate: checks that block merge and release.
-
-<!-- techlead:section id=dod -->
-## 12. Definition of Done
-
-- [ ] Every task in `TASKS.md` is complete and verified.
-- [ ] Every FR and NFR is implemented and linked to at least one task.
-- [ ] Test coverage is >= 80 percent.
-- [ ] The local/test Docker environment starts cleanly and passes the test suite.
-- [ ] The production image builds and passes vulnerability scanning.
-- [ ] The production deployment passes the VPS smoke test.
-- [ ] Rollback and backup restore have been exercised.
-- [ ] Security, privacy, and operational documentation are current.
-- [ ] No secrets are committed and no critical or high vulnerabilities remain.
+- Adoption, scope, dependency, or go-to-market risk.
 
 <!-- techlead:section id=risks -->
-## 13. Risks and Mitigations
+## 10. Business Risks and Mitigations
 
 | Risk | Probability | Impact | Mitigation | Owner |
 | --- | --- | --- | --- | --- |
 | Risk description | Low, Medium, or High | Low, Medium, or High | Concrete mitigation | Name or role |
 
+<!-- techlead:section id=dod -->
+## 11. Product Definition of Done
+
+- [ ] Every must-have acceptance criterion is met and demonstrated.
+- [ ] Every FR and NFR is accepted by the product owner.
+- [ ] Success metrics are instrumented and ready to be measured.
+- [ ] Out-of-scope items are confirmed and documented.
+- [ ] User-facing documentation and support material are ready.
+- [ ] Launch go/no-go criteria in `PLAN.md` are satisfied.
+
 <!-- techlead:section id=qa -->
-## 14. Interview Answers
+## 12. Interview Answers
 
 ### Q-001
 
@@ -212,15 +154,15 @@ Describe what users do today and why it is insufficient.
 - Question: Exact question asked during the interview.
 - Answer: Exact answer or approved decision.
 
-Add one entry for every question asked. If the user delegated a decision, write the chosen assumption and note that it was approved.
+Add one entry for every question asked. If the user delegated a decision, write the chosen assumption and note that it was approved. At least eight answered questions are required.
 
 <!-- techlead:section id=traceability -->
-## 15. Requirement Traceability
+## 13. Requirement Traceability
 
-| Requirement | Summary | Delivered by |
+| Requirement | Summary | SPEC coverage |
 | --- | --- | --- |
-| FR-001 | Short requirement summary | TASK-001, TASK-004 |
-| NFR-001 | Short requirement summary | TASK-007 |
+| FR-001 | Short requirement summary | TR-001, TR-003 |
+| NFR-001 | Short requirement summary | TR-002 |
 
-Every requirement must appear in this table and in at least one task.
+Every FR and NFR must map to at least one TR in `SPEC.md`. The final requirement-to-milestone and requirement-to-task maps live in `PLAN.md` and `TASKS.md`.
 ```

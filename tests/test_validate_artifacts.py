@@ -1,419 +1,443 @@
 from __future__ import annotations
 
 import json
-from textwrap import dedent
+import re
+from pathlib import Path
 
 import pytest
 
-from validate_artifacts import (
-    main,
-    parse_attributes,
-    split_list,
-    validate_files,
-    validate_texts,
-)
-
-
-VALID_PRD = dedent(
-    """\
-    <!-- techlead:artifact type=prd version=1 -->
-    # PRD: Example
-
-    - Status: Approved
-    - Date: 2026-01-01
-    - Owner: Example team
-    - Artifact language: English
-    - Coverage gate: >= 80 percent
-
-    <!-- techlead:section id=summary -->
-    ## Summary
-
-    A small service that lets operators review requests and audit decisions.
-
-    <!-- techlead:section id=problem -->
-    ## Problem
-
-    Operators lack a reliable review queue and cannot prove who approved a request.
-
-    <!-- techlead:section id=users -->
-    ## Users
-
-    Operations staff review requests and auditors inspect the decision history.
-
-    <!-- techlead:section id=scope -->
-    ## Scope
-
-    ### In scope
-
-    - Request submission, review, decision, and audit history.
-
-    ### Out of scope
-
-    - Billing and third-party marketplace integrations.
-
-    <!-- techlead:section id=functional -->
-    ## Functional Requirements
-
-    - **FR-001**: The operator can approve or reject a submitted request and sees the updated decision.
-
-    <!-- techlead:section id=nonfunctional -->
-    ## Non-Functional Requirements
-
-    - **NFR-001**: The test suite must keep line and branch coverage at or above 80 percent.
-    - **NFR-002**: All decisions must be immutable and recorded in the audit log within one second.
-
-    <!-- techlead:section id=assumptions -->
-    ## Assumptions
-
-    - The first release serves a single operations team.
-
-    <!-- techlead:section id=architecture -->
-    ## Architecture
-
-    The service uses a web API, a relational database, and a background audit writer.
-
-    <!-- techlead:section id=security -->
-    ## Security
-
-    - Authentication uses the organization identity provider.
-    - Authorization limits decisions to the reviewer role.
-    - Audit records exclude secrets and personal data.
-
-    <!-- techlead:section id=docker -->
-    ## Docker
-
-    <!-- techlead:env id=local -->
-    ### Local and test environment
-
-    - A development image runs the API with hot reload.
-    - A Compose service starts the database.
-    - A dedicated test service runs the full suite.
-    - A reset command removes local state safely.
-
-    <!-- techlead:env id=production -->
-    ### Production environment (VPS)
-
-    - A multi-stage image uses a pinned base version.
-    - The runtime uses a non-root user and a read-only filesystem.
-    - Secrets are injected at runtime.
-    - A reverse proxy terminates TLS and sets secure headers.
-    - The host uses key-only SSH and a restrictive firewall.
-    - Backups, restore, image scanning, deployment, and rollback are documented.
-
-    <!-- techlead:section id=testing -->
-    ## Testing
-
-    - Coverage gate: >= 80 percent.
-    - Unit tests cover validation and decision rules.
-    - Integration tests use a disposable database.
-    - End-to-end tests cover the review journey.
-    - Coverage command: pytest --cov --cov-branch --cov-fail-under=80.
-
-    <!-- techlead:section id=dod -->
-    ## Definition of Done
-
-    - [ ] Every task is complete and verified.
-    - [ ] Every requirement is covered by a task.
-    - [ ] Test coverage is at least 80 percent.
-    - [ ] The local Docker environment passes the test suite.
-    - [ ] The production image deploys and passes the smoke test.
-    - [ ] Rollback and restore have been exercised.
-
-    <!-- techlead:section id=risks -->
-    ## Risks
-
-    | Risk | Probability | Impact | Mitigation | Owner |
-    | --- | --- | --- | --- | --- |
-    | Slow review | Medium | Medium | Add queue metrics | Lead |
-
-    <!-- techlead:section id=qa -->
-    ## Interview Answers
-
-    ### Q-001
-
-    - Question: What problem are we solving?
-    - Answer: Operators need a reliable review queue.
-
-    ### Q-002
-
-    - Question: Who are the primary users?
-    - Answer: Operations staff and auditors.
-
-    ### Q-003
-
-    - Question: What must the first release include?
-    - Answer: Submission, review, decision, and audit history.
-
-    ### Q-004
-
-    - Question: What is explicitly out of scope?
-    - Answer: Billing and marketplace integrations.
-
-    ### Q-005
-
-    - Question: How will we measure success?
-    - Answer: Every decision is recorded and review time drops below one day.
-
-    ### Q-006
-
-    - Question: What security controls are required?
-    - Answer: Identity provider login, reviewer authorization, and audit logging.
-
-    ### Q-007
-
-    - Question: How will the project run locally?
-    - Answer: Docker Compose with a development image and a test service.
-
-    ### Q-008
-
-    - Question: How will the project run in production?
-    - Answer: A hardened container on a VPS behind a TLS reverse proxy.
-
-    <!-- techlead:section id=traceability -->
-    ## Traceability
-
-    | Requirement | Summary | Delivered by |
-    | --- | --- | --- |
-    | FR-001 | Review decision | TASK-001, TASK-006 |
-    | NFR-001 | Coverage gate | TASK-004 |
-    | NFR-002 | Audit latency | TASK-003 |
-    """
-)
-
-
-VALID_TASKS = dedent(
-    """\
-    <!-- techlead:artifact type=tasks version=1 -->
-    # TASKS: Example
-
-    - Source PRD: `./PRD.md`
-    - Status: Approved
-    - Execution order: top to bottom, respecting dependencies
-
-    <!-- techlead:section id=rules -->
-    ## Execution Rules
-
-    - Work in task order and verify each task before continuing.
-
-    <!-- techlead:section id=tasks -->
-    ## Tasks
-
-    <!-- techlead:task id=TASK-001 depends=none prd=FR-001 tags=foundation -->
-    ### TASK-001: Create the data model
-
-    - [ ] Status
-    - Depends on: none
-    - PRD: FR-001
-    - Acceptance: The request and decision entities exist with the approved relationships.
-    - Verify: Run the migration test and inspect the schema.
-    - Files: migrations, models, and schema tests.
-
-    <!-- techlead:task id=TASK-002 depends=TASK-001 prd=FR-001 tags=core -->
-    ### TASK-002: Implement the review API
-
-    - [ ] Status
-    - Depends on: TASK-001
-    - PRD: FR-001
-    - Acceptance: A reviewer can approve or reject a request and observe the new decision.
-    - Verify: Run the review API integration tests.
-    - Files: api handlers, services, and integration tests.
-
-    <!-- techlead:task id=TASK-003 depends=TASK-002 prd=NFR-002 tags=security -->
-    ### TASK-003: Implement authorization and audit
-
-    - [ ] Status
-    - Depends on: TASK-002
-    - PRD: NFR-002
-    - Acceptance: Only reviewers can decide, and every decision is written to the audit log.
-    - Verify: Run security tests and inspect the audit records.
-    - Files: authorization rules, audit writer, and security tests.
-
-    <!-- techlead:task id=TASK-004 depends=TASK-002 prd=NFR-001 tags=coverage-gate -->
-    ### TASK-004: Reach the coverage gate
-
-    - [ ] Status
-    - Depends on: TASK-002
-    - PRD: NFR-001
-    - Acceptance: Unit, integration, and end-to-end tests cover primary and failure paths at or above 80 percent.
-    - Verify: Run pytest --cov --cov-branch --cov-fail-under=80.
-    - Files: tests, fixtures, and coverage configuration.
-
-    <!-- techlead:task id=TASK-005 depends=TASK-003,TASK-004 prd=NFR-001 tags=docker-local,docker-production -->
-    ### TASK-005: Build the Docker environments
-
-    - [ ] Status
-    - Depends on: TASK-003, TASK-004
-    - PRD: NFR-001
-    - Acceptance: Local Compose and the hardened production image both build and pass their checks.
-    - Verify: Start the local stack, run the tests, build the production image, and scan it.
-    - Files: Dockerfiles, Compose files, proxy config, and scripts.
-
-    <!-- techlead:task id=TASK-006 depends=TASK-005 prd=FR-001,NFR-002 tags=deployment,final-gate -->
-    ### TASK-006: Deploy and verify the definition of done
-
-    - [ ] Status
-    - Depends on: TASK-005
-    - PRD: FR-001, NFR-002
-    - Acceptance: The VPS deployment passes the smoke test, rollback works, and all evidence is recorded.
-    - Verify: Deploy, run the smoke test, roll back, and review the evidence.
-    - Files: deployment workflow, runbook, and release notes.
-
-    <!-- techlead:section id=traceability -->
-    ## Traceability
-
-    | Requirement | Tasks |
-    | --- | --- |
-    | FR-001 | TASK-001, TASK-002, TASK-006 |
-    | NFR-001 | TASK-004, TASK-005 |
-    | NFR-002 | TASK-003, TASK-006 |
-
-    <!-- techlead:section id=dod -->
-    ## Definition of Done
-
-    - [ ] Every task is checked and verified.
-    - [ ] Every requirement is covered by a task.
-    - [ ] Test coverage is at least 80 percent.
-    - [ ] The local Docker stack passes the test suite.
-    - [ ] The production image scans clean and passes the smoke test.
-    - [ ] Rollback and restore have been exercised.
-    """
-)
+from artifact_model import parse_attributes, parse_milestones, parse_tasks, split_list
+from fixtures_v2 import valid_texts
+from validate_artifacts import main, validate_files, validate_texts
+
+
+def run(**overrides: str | None):
+    texts = valid_texts()
+    texts.update({key: value for key, value in overrides.items() if value is not None})
+    return validate_texts(
+        texts["prd"],
+        texts["tasks"],
+        spec_text=texts["spec"],
+        plan_text=texts["plan"],
+        agents_text=texts["agents"],
+        readme_text=texts["readme"],
+    )
+
+
+def codes(report) -> set[str]:
+    return {issue.code for issue in report.errors}
 
 
 def test_valid_artifacts_pass() -> None:
-    report = validate_texts(VALID_PRD, VALID_TASKS)
+    report = run()
     assert report.ok, [issue.message for issue in report.errors]
     assert report.stats["tasks"] == 6
-    assert report.stats["functional_requirements"] == 1
+    assert report.stats["milestones"] == 2
+    assert report.stats["functional_requirements"] == 2
     assert report.stats["nonfunctional_requirements"] == 2
+    assert report.stats["technical_requirements"] == 4
     assert report.stats["interview_questions"] == 8
-    assert report.stats["prd_coverage_gate"] == 80
+    assert report.stats.get("prd_coverage_gate") == 80 or report.stats.get("coverage_gate") == 80
 
 
 def test_valid_artifacts_pass_strict() -> None:
-    report = validate_texts(VALID_PRD, VALID_TASKS)
+    report = run()
     assert not report.warnings
 
 
+def test_partial_validation_without_optional_artifacts() -> None:
+    texts = valid_texts()
+    report = validate_texts(texts["prd"], texts["tasks"])
+    assert report.ok, [issue.message for issue in report.errors]
+
+
 def test_placeholder_is_rejected() -> None:
-    report = validate_texts(VALID_PRD.replace("audit decisions", "audit TODO decisions"), VALID_TASKS)
-    assert any(issue.code == "placeholder" for issue in report.errors)
+    report = run(prd=valid_texts()["prd"].replace("audit history", "audit TODO history", 1))
+    assert "placeholder" in codes(report)
+
+
+def test_placeholder_in_optional_artifact_is_rejected() -> None:
+    report = run(readme=valid_texts()["readme"].replace("Review Queue", "Review TBD Queue", 1))
+    assert "placeholder" in codes(report)
 
 
 def test_placeholder_inside_code_fence_is_ignored() -> None:
-    prd = VALID_PRD.replace(
-        "A small service that lets operators review requests and audit decisions.",
-        "A small service that lets operators review requests and audit decisions.\n\n```text\nTODO\n```",
+    prd = valid_texts()["prd"].replace(
+        "A review queue that lets operations staff decide requests and prove who approved them.",
+        "A review queue that lets operations staff decide requests and prove who approved them.\n\n```text\nTODO\n```",
     )
-    report = validate_texts(prd, VALID_TASKS)
+    report = run(prd=prd)
     assert report.ok, [issue.message for issue in report.errors]
 
 
 def test_missing_section_is_rejected() -> None:
-    prd = VALID_PRD.replace("<!-- techlead:section id=risks -->", "")
-    report = validate_texts(prd, VALID_TASKS)
-    assert any(issue.code == "missing-section" for issue in report.errors)
+    report = run(prd=valid_texts()["prd"].replace("<!-- techlead:section id=risks -->", ""))
+    assert "missing-section" in codes(report)
+
+
+def test_unsupported_version_is_rejected() -> None:
+    report = run(prd=valid_texts()["prd"].replace("version=2", "version=1", 1))
+    assert "unsupported-version" in codes(report)
+
+
+def test_wrong_artifact_type_is_rejected() -> None:
+    report = run(spec=valid_texts()["spec"].replace("type=spec", "type=prd", 1))
+    assert "wrong-artifact-type" in codes(report)
+
+
+def test_missing_metadata_is_rejected() -> None:
+    report = run(readme=valid_texts()["readme"])
+    assert report.ok
+    report = run(agents=valid_texts()["agents"].replace("- Source artifacts:", "- Sources:"))
+    assert report.ok
+    report = run(spec=valid_texts()["spec"].replace("- Coverage gate: >= 80 percent\n", "", 1))
+    assert "missing-metadata" in codes(report)
 
 
 def test_missing_docker_environment_is_rejected() -> None:
-    prd = VALID_PRD.replace("<!-- techlead:env id=production -->", "")
-    report = validate_texts(prd, VALID_TASKS)
-    assert any(issue.code == "missing-docker-environment" for issue in report.errors)
+    report = run(spec=valid_texts()["spec"].replace("<!-- techlead:env id=production -->", ""))
+    assert "missing-docker-environment" in codes(report)
+
+
+def test_thin_docker_environment_is_rejected() -> None:
+    lines = [
+        "- A multi-stage image uses a pinned base version.",
+        "- The runtime uses a non-root user and a read-only filesystem.",
+        "- Capabilities are dropped and no-new-privileges is enabled.",
+        "- Secrets are injected at runtime from the host secret store.",
+        "- A reverse proxy terminates TLS and sets secure headers.",
+    ]
+    production = "\n".join(lines)
+    spec = valid_texts()["spec"]
+    start = spec.index("<!-- techlead:env id=production -->")
+    end = spec.index("<!-- techlead:section id=testing -->")
+    report = run(spec=spec[:start] + "<!-- techlead:env id=production -->\n" + production + "\n\n" + spec[end:])
+    assert "thin-docker-environment" in codes(report)
 
 
 def test_low_coverage_is_rejected() -> None:
-    prd = VALID_PRD.replace(
-        "- Coverage gate: >= 80 percent.\n- Unit tests cover validation and decision rules.",
-        "- Coverage gate: >= 70 percent.\n- Unit tests cover validation and decision rules.",
+    spec = valid_texts()["spec"].replace(
+        "- Coverage gate: >= 80 percent.\n- Unit tests",
+        "- Coverage gate: >= 70 percent.\n- Unit tests",
+        1,
     )
-    report = validate_texts(prd, VALID_TASKS)
-    assert any(issue.code == "coverage-too-low" for issue in report.errors)
+    report = run(spec=spec)
+    assert "coverage-too-low" in codes(report)
 
 
 def test_missing_coverage_percentage_is_rejected() -> None:
-    prd = VALID_PRD.replace("Coverage gate: >= 80 percent.", "Coverage gate: mandatory.", 1)
-    report = validate_texts(prd, VALID_TASKS)
-    assert any(issue.code == "missing-coverage-gate" for issue in report.errors)
+    spec = valid_texts()["spec"].replace(
+        "- Coverage gate: >= 80 percent.\n- Unit tests",
+        "- Coverage gate: mandatory.\n- Unit tests",
+        1,
+    )
+    spec = spec.replace(
+        "- Coverage command: pytest --cov --cov-branch --cov-fail-under=80.",
+        "- Coverage command: pytest --cov --cov-branch.",
+        1,
+    )
+    report = run(spec=spec)
+    assert "missing-coverage-gate" in codes(report)
+
+
+def test_missing_coverage_mention_is_rejected() -> None:
+    spec = valid_texts()["spec"].replace(
+        "- Coverage gate: >= 80 percent.\n- Unit tests cover validation, authorization, and decision rules.\n"
+        "- Integration tests use a disposable database and exercise migrations.\n"
+        "- End-to-end tests cover the review and audit journeys.\n"
+        "- Coverage command: pytest --cov --cov-branch --cov-fail-under=80.",
+        "- Quality gate: >= 80 percent.\n- Unit tests cover validation, authorization, and decision rules.\n"
+        "- Integration tests use a disposable database and exercise migrations.\n"
+        "- End-to-end tests cover the review and audit journeys.\n"
+        "- Quality command: pytest --cov --cov-branch --cov-fail-under=80.",
+        1,
+    )
+    report = run(spec=spec)
+    assert "missing-coverage" in codes(report)
 
 
 def test_insufficient_questions_is_rejected() -> None:
-    prd = VALID_PRD.split("### Q-008")[0] + VALID_PRD.split("<!-- techlead:section id=traceability -->")[1]
-    report = validate_texts(prd, VALID_TASKS)
-    assert any(issue.code == "insufficient-interview" for issue in report.errors)
+    prd = valid_texts()["prd"].split("### Q-008")[0] + "\n<!-- techlead:section id=traceability -->\n## Traceability\n\n| FR-001 | x | TR-001 |\n"
+    report = run(prd=prd)
+    assert "insufficient-interview" in codes(report)
 
 
 def test_duplicate_requirement_is_rejected() -> None:
-    prd = VALID_PRD.replace(
-        "- **NFR-002**: All decisions must be immutable and recorded in the audit log within one second.",
-        "- **NFR-002**: All decisions must be immutable and recorded in the audit log within one second.\n"
+    prd = valid_texts()["prd"].replace(
+        "- **NFR-002**: Every decision must be recorded in the audit log within one second.",
+        "- **NFR-002**: Every decision must be recorded in the audit log within one second.\n"
         "- **NFR-002**: Duplicate definition.",
+        1,
     )
-    report = validate_texts(prd, VALID_TASKS)
-    assert any(issue.code == "duplicate-requirement" for issue in report.errors)
+    report = run(prd=prd)
+    assert "duplicate-requirement" in codes(report)
 
 
-def test_missing_prd_reference_is_rejected() -> None:
-    tasks = VALID_TASKS.replace("prd=FR-001 tags=foundation", "tags=foundation")
-    tasks = tasks.replace("- PRD: FR-001\n", "", 1)
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "missing-prd-reference" for issue in report.errors)
+def test_technical_requirement_in_prd_is_rejected() -> None:
+    prd = valid_texts()["prd"].replace(
+        "- **FR-002**: The auditor can search the decision history by request, actor, and date.",
+        "- **FR-002**: The auditor can search the decision history by request, actor, and date.\n"
+        "- **TR-009**: The API must validate every input against a schema.",
+        1,
+    )
+    report = run(prd=prd)
+    assert "technical-requirement-in-prd" in codes(report)
 
 
-def test_unknown_prd_reference_is_rejected() -> None:
-    tasks = VALID_TASKS.replace("prd=FR-001 tags=foundation", "prd=FR-999 tags=foundation")
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "unknown-prd-reference" for issue in report.errors)
+def test_product_requirement_in_spec_is_rejected() -> None:
+    spec = valid_texts()["spec"].replace(
+        "- **TR-001**: The API must validate every request body against a schema and return a typed error before persistence.",
+        "- **TR-001**: The API must validate every request body against a schema and return a typed error before persistence.\n"
+        "- **FR-009**: The user can do something testable.",
+        1,
+    )
+    report = run(spec=spec)
+    assert "product-requirement-in-spec" in codes(report)
+
+
+def test_missing_technical_requirement_is_rejected() -> None:
+    spec = valid_texts()["spec"]
+    start = spec.index("<!-- techlead:section id=technical -->")
+    end = spec.index("<!-- techlead:section id=security -->")
+    spec = spec[:start] + "<!-- techlead:section id=technical -->\n## Technical Requirements\n\nNo requirements yet.\n\n" + spec[end:]
+    report = run(spec=spec)
+    assert "missing-technical-requirement" in codes(report)
+
+
+def test_missing_spec_traceability_is_rejected() -> None:
+    spec = valid_texts()["spec"].replace("| NFR-002 | Audit latency | NFR-002 | Audit worker |\n", "", 1)
+    spec = spec.replace("| TR-003 | Audit latency | NFR-002 | Audit worker |\n", "", 1)
+    report = run(spec=spec)
+    assert "traceability-gap" in codes(report)
+
+
+def test_scope_subsections_are_required() -> None:
+    prd = valid_texts()["prd"].replace("### Out of scope", "### Excluded", 1)
+    report = run(prd=prd)
+    assert "missing-out-of-scope" in codes(report)
+
+
+def test_risk_table_is_required() -> None:
+    plan = valid_texts()["plan"].replace("| Risk | Probability | Impact | Mitigation | Owner |", "Risk list", 1)
+    report = run(plan=plan)
+    assert "missing-risk-table" in codes(report)
+
+
+def test_missing_milestone_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace("<!-- techlead:milestone id=M1 order=1 depends=none covers=FR-001,NFR-001,TR-001 -->", "")
+    report = run(plan=plan)
+    assert "unknown-milestone-requirement" in codes(report) or "uncovered-requirements" in codes(report)
+
+
+def test_duplicate_milestone_id_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace(
+        "<!-- techlead:milestone id=M2 order=2 depends=M1", "<!-- techlead:milestone id=M1 order=2 depends=M1", 1
+    )
+    report = run(plan=plan)
+    assert "duplicate-milestone-id" in codes(report)
+
+
+def test_milestone_order_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace(
+        "<!-- techlead:milestone id=M2 order=2 depends=M1", "<!-- techlead:milestone id=M2 order=1 depends=M1", 1
+    )
+    report = run(plan=plan)
+    assert "milestone-order" in codes(report)
+
+
+def test_unknown_milestone_requirement_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace("covers=FR-002,NFR-002", "covers=FR-999,NFR-002", 1)
+    report = run(plan=plan)
+    assert "unknown-milestone-requirement" in codes(report)
 
 
 def test_uncovered_requirement_is_rejected() -> None:
-    tasks = VALID_TASKS.replace("prd=NFR-002 tags=security", "prd=NFR-001 tags=security")
-    tasks = tasks.replace("prd=FR-001,NFR-002 tags=deployment,final-gate", "prd=FR-001 tags=deployment,final-gate")
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "uncovered-requirements" for issue in report.errors)
+    plan = valid_texts()["plan"].replace("covers=FR-002,NFR-002", "covers=NFR-002", 1)
+    report = run(plan=plan)
+    assert "uncovered-requirements" in codes(report)
 
 
-def test_unknown_dependency_is_rejected() -> None:
-    tasks = VALID_TASKS.replace("depends=TASK-001 prd=FR-001", "depends=TASK-999 prd=FR-001")
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "unknown-dependency" for issue in report.errors)
+def test_missing_milestone_field_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace("- Exit criteria: Search works, audit latency is within one second, and production passes the smoke test.\n", "", 1)
+    report = run(plan=plan)
+    assert "missing-milestone-exit" in codes(report)
 
 
-def test_duplicate_task_id_is_rejected() -> None:
-    tasks = VALID_TASKS.replace("id=TASK-002", "id=TASK-001", 1)
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "duplicate-task-id" for issue in report.errors)
+def test_unknown_milestone_dependency_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace("depends=M1 covers=FR-002", "depends=M9 covers=FR-002", 1)
+    report = run(plan=plan)
+    assert "unknown-milestone-dependency" in codes(report)
+
+
+def test_incomplete_launch_strategy_is_rejected() -> None:
+    plan = valid_texts()["plan"].replace(
+        "- Rollback restores the previous image within ten minutes and keeps audit data intact.",
+        "- Recovery restores the previous image within ten minutes and keeps audit data intact.",
+        1,
+    )
+    report = run(plan=plan)
+    assert "incomplete-strategy" in codes(report)
+
+
+def test_single_milestone_is_a_warning() -> None:
+    plan = valid_texts()["plan"]
+    start = plan.index("<!-- techlead:milestone id=M2")
+    end = plan.index("<!-- techlead:section id=dependencies -->")
+    plan = plan[:start] + plan[end:]
+    plan = plan.replace("covers=FR-001,NFR-001,TR-001", "covers=FR-001,FR-002,NFR-001,NFR-002,TR-001,TR-002,TR-003,TR-004", 1)
+    plan = plan.replace("| FR-002 | M2 |\n", "| FR-002 | M1 |\n", 1)
+    plan = plan.replace("| NFR-002 | M2 |\n", "| NFR-002 | M1 |\n", 1)
+    plan = plan.replace("| TR-002 | M2 |\n", "| TR-002 | M1 |\n", 1)
+    plan = plan.replace("| TR-003 | M2 |\n", "| TR-003 | M1 |\n", 1)
+    plan = plan.replace("| TR-004 | M2 |\n", "| TR-004 | M1 |\n", 1)
+    report = run(plan=plan)
+    assert "single-milestone" in {issue.code for issue in report.warnings}
+
+
+def test_missing_task_spec_reference_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace(" spec=TR-001 milestone=M1", " milestone=M1", 1)
+    tasks = tasks.replace("- SPEC: TR-001\n- Milestone: M1", "- Milestone: M1", 1)
+    report = run(tasks=tasks)
+    assert "missing-spec-reference" in codes(report)
+
+
+def test_unknown_task_spec_reference_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace("spec=TR-001 milestone=M1", "spec=TR-999 milestone=M1", 1)
+    tasks = tasks.replace("- SPEC: TR-001\n- Milestone: M1", "- SPEC: TR-999\n- Milestone: M1", 1)
+    report = run(tasks=tasks)
+    assert "unknown-spec-reference" in codes(report)
+
+
+def test_missing_task_milestone_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace(" spec=TR-001 milestone=M1", " spec=TR-001", 1)
+    tasks = tasks.replace("- SPEC: TR-001\n- Milestone: M1", "- SPEC: TR-001", 1)
+    report = run(tasks=tasks)
+    assert "missing-task-milestone" in codes(report)
+
+
+def test_unknown_task_milestone_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace("milestone=M1 tags=foundation", "milestone=M9 tags=foundation", 1)
+    tasks = tasks.replace("- Milestone: M1\n- Issue title: Bootstrap the API skeleton", "- Milestone: M9\n- Issue title: Bootstrap the API skeleton", 1)
+    report = run(tasks=tasks)
+    assert "unknown-task-milestone" in codes(report)
+
+
+def test_missing_labels_and_prefix_are_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace("labels=type:chore,area:infra,priority:p1", "labels=type:chore,area:infra", 1)
+    tasks = tasks.replace("- Labels: type:chore, area:infra, priority:p1", "- Labels: type:chore, area:infra", 1)
+    report = run(tasks=tasks)
+    assert "missing-labels" in codes(report)
+    assert "missing-label-prefix" in codes(report)
+
+
+def test_invalid_estimate_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace("- Estimate: S\n- Acceptance: The API starts", "- Estimate: XL\n- Acceptance: The API starts", 1)
+    report = run(tasks=tasks)
+    assert "invalid-estimate" in codes(report)
+
+
+def test_long_issue_title_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace(
+        "- Issue title: Bootstrap the API skeleton",
+        f"- Issue title: {'Bootstrap the API skeleton with a very long descriptive title that exceeds the limit'}",
+        1,
+    )
+    report = run(tasks=tasks)
+    assert "long-issue-title" in codes(report)
+
+
+def test_duplicate_issue_title_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace(
+        "- Issue title: Implement the decision endpoint",
+        "- Issue title: Bootstrap the API skeleton",
+        1,
+    )
+    report = run(tasks=tasks)
+    assert "duplicate-issue-title" in codes(report)
+
+
+def test_task_too_large_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace(
+        "- Files: src/main.py, src/health.py, tests/test_health.py",
+        "- Files: a.py, b.py, c.py, d.py, e.py, f.py",
+        1,
+    )
+    report = run(tasks=tasks)
+    assert "task-too-large" in codes(report)
 
 
 def test_missing_mandatory_tag_is_rejected() -> None:
-    tasks = VALID_TASKS.replace("tags=docker-local,docker-production", "tags=docker-local")
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "missing-mandatory-tags" for issue in report.errors)
+    tasks = valid_texts()["tasks"].replace("tags=docker-local,security", "tags=security", 1)
+    tasks = tasks.replace("tags=coverage-gate,docker-local", "tags=coverage-gate", 1)
+    report = run(tasks=tasks)
+    assert "missing-mandatory-tags" in codes(report)
 
 
-def test_missing_optional_final_gate_is_warning() -> None:
-    tasks = VALID_TASKS.replace("tags=deployment,final-gate", "tags=deployment")
-    report = validate_texts(VALID_PRD, tasks)
+def test_missing_final_gate_is_a_warning() -> None:
+    tasks = valid_texts()["tasks"].replace("tags=docker-production,deployment,final-gate", "tags=docker-production,deployment", 1)
+    report = run(tasks=tasks)
     assert report.ok
-    assert any(issue.code == "missing-final-gate" for issue in report.warnings)
+    assert "missing-final-gate" in {issue.code for issue in report.warnings}
 
 
-def test_missing_verify_field_is_rejected() -> None:
-    tasks = VALID_TASKS.replace(
-        "- Verify: Run the review API integration tests.\n",
-        "",
-    )
-    report = validate_texts(VALID_PRD, tasks)
-    assert any(issue.code == "missing-verify" for issue in report.errors)
+def test_milestone_without_task_is_rejected() -> None:
+    tasks = valid_texts()["tasks"]
+    for task in ("TASK-004", "TASK-005", "TASK-006"):
+        tasks = tasks.replace(f" milestone=M2 tags", f" milestone=M1 tags", 1)
+    tasks = tasks.replace("- Milestone: M2", "- Milestone: M1")
+    report = run(tasks=tasks)
+    assert "milestone-without-task" in codes(report)
 
 
-def test_minimum_task_count_is_configurable() -> None:
-    report = validate_texts(VALID_PRD, VALID_TASKS, min_tasks=10)
-    assert any(issue.code == "insufficient-tasks" for issue in report.errors)
+def test_uncovered_task_requirement_is_rejected() -> None:
+    tasks = re.sub(r"\bprd=[^ ]+", "prd=FR-001", valid_texts()["tasks"])
+    report = run(tasks=tasks)
+    assert "uncovered-requirements" in codes(report)
 
 
-def test_minimum_question_count_is_configurable() -> None:
-    report = validate_texts(VALID_PRD, VALID_TASKS, min_questions=9)
-    assert any(issue.code == "insufficient-interview" for issue in report.errors)
+def test_incomplete_issue_format_is_rejected() -> None:
+    tasks = valid_texts()["tasks"]
+    tasks = tasks.replace("- Create issues with `gh` for GitHub or `glab` for GitLab after approval.", "- Create issues after approval.", 1)
+    tasks = tasks.replace("- Dry-run with `export_issues.py` before creating anything.", "- Dry-run before creating anything.", 1)
+    report = run(tasks=tasks)
+    assert "incomplete-issue-format" in codes(report)
+
+
+def test_missing_task_traceability_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace("| M2 | TASK-004, TASK-005, TASK-006 |\n", "", 1)
+    report = run(tasks=tasks)
+    assert "traceability-milestone" in codes(report)
+
+
+def test_missing_task_dod_docker_is_rejected() -> None:
+    tasks = valid_texts()["tasks"].replace("- [ ] The local Docker environment passes the test suite.", "- [ ] The local environment passes the test suite.", 1)
+    report = run(tasks=tasks)
+    assert "missing-dod-docker" in codes(report)
+
+
+def test_agents_missing_document_link_is_rejected() -> None:
+    agents = valid_texts()["agents"].replace("PRD.md", "product brief")
+    report = run(agents=agents)
+    assert "missing-document-link" in codes(report)
+
+
+def test_agents_missing_security_content_is_rejected() -> None:
+    agents = valid_texts()["agents"]
+    agents = agents.replace("secrets", "credentials").replace("Secrets", "Credentials").replace("secret", "credential")
+    report = run(agents=agents)
+    assert "missing-agents-content" in codes(report)
+
+
+def test_readme_missing_document_link_is_rejected() -> None:
+    readme = valid_texts()["readme"].replace("- AGENTS.md: project memory and engineering conventions.\n", "", 1)
+    report = run(readme=readme)
+    assert "missing-document-link" in codes(report)
+
+
+def test_readme_missing_coverage_content_is_rejected() -> None:
+    readme = re.sub(r"coverage", "tests", valid_texts()["readme"], flags=re.IGNORECASE)
+    report = run(readme=readme)
+    assert "missing-readme-content" in codes(report)
 
 
 def test_parse_attributes_handles_quotes() -> None:
@@ -431,31 +455,86 @@ def test_split_list_handles_none_and_values() -> None:
     assert split_list("TASK-001, TASK-002") == ["TASK-001", "TASK-002"]
 
 
-def test_validate_files_reports_missing_files(tmp_path) -> None:
+def test_parse_tasks_and_milestones() -> None:
+    texts = valid_texts()
+    tasks = parse_tasks(texts["tasks"])
+    milestones = parse_milestones(texts["plan"])
+    assert tasks[0].task_id == "TASK-001"
+    assert tasks[0].milestone == "M1"
+    assert tasks[0].spec_refs == ["TR-001"]
+    assert milestones[0].milestone_id == "M1"
+    assert milestones[1].depends == ["M1"]
+
+
+def test_validate_files_reports_missing_files(tmp_path: Path) -> None:
     report = validate_files(tmp_path / "missing-prd.md", tmp_path / "missing-tasks.md")
     assert len(report.errors) == 2
     assert all(issue.code == "missing-file" for issue in report.errors)
 
 
-def test_cli_json_output(tmp_path, capsys) -> None:
-    prd = tmp_path / "PRD.md"
-    tasks = tmp_path / "TASKS.md"
-    prd.write_text(VALID_PRD, encoding="utf-8")
-    tasks.write_text(VALID_TASKS, encoding="utf-8")
-    exit_code = main([str(prd), str(tasks), "--json"])
+def write_all(tmp_path: Path) -> tuple[Path, Path]:
+    texts = valid_texts()
+    paths = {
+        "prd": tmp_path / "PRD.md",
+        "spec": tmp_path / "SPEC.md",
+        "plan": tmp_path / "PLAN.md",
+        "tasks": tmp_path / "TASKS.md",
+        "agents": tmp_path / "AGENTS.md",
+        "readme": tmp_path / "README.md",
+    }
+    for key, path in paths.items():
+        path.write_text(texts[key], encoding="utf-8")
+    return paths["prd"], paths["tasks"]
+
+
+def test_cli_json_output(tmp_path: Path, capsys) -> None:
+    prd, tasks = write_all(tmp_path)
+    exit_code = main([str(prd), str(tasks), "--all", "--json"])
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert exit_code == 0
     assert payload["status"] == "pass"
     assert payload["stats"]["tasks"] == 6
+    assert payload["stats"]["milestones"] == 2
 
 
-def test_cli_strict_fails_on_warning(tmp_path, capsys) -> None:
+def test_cli_all_reports_missing_siblings(tmp_path: Path, capsys) -> None:
     prd = tmp_path / "PRD.md"
     tasks = tmp_path / "TASKS.md"
-    prd.write_text(VALID_PRD, encoding="utf-8")
-    tasks.write_text(VALID_TASKS.replace("tags=deployment,final-gate", "tags=deployment"), encoding="utf-8")
-    exit_code = main([str(prd), str(tasks), "--strict"])
+    prd.write_text(valid_texts()["prd"], encoding="utf-8")
+    tasks.write_text(valid_texts()["tasks"], encoding="utf-8")
+    exit_code = main([str(prd), str(tasks), "--all"])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err.count("missing-file") == 4
+
+
+def test_cli_explicit_paths(tmp_path: Path, capsys) -> None:
+    prd, tasks = write_all(tmp_path)
+    exit_code = main(
+        [
+            str(prd),
+            str(tasks),
+            "--spec",
+            str(tmp_path / "SPEC.md"),
+            "--plan",
+            str(tmp_path / "PLAN.md"),
+            "--agents",
+            str(tmp_path / "AGENTS.md"),
+            "--readme",
+            str(tmp_path / "README.md"),
+        ]
+    )
+    assert exit_code == 0, capsys.readouterr().err
+
+
+def test_cli_strict_fails_on_warning(tmp_path: Path, capsys) -> None:
+    prd, tasks = write_all(tmp_path)
+    tasks.write_text(
+        valid_texts()["tasks"].replace("tags=docker-production,deployment,final-gate", "tags=docker-production,deployment"),
+        encoding="utf-8",
+    )
+    exit_code = main([str(prd), str(tasks), "--all", "--strict"])
     captured = capsys.readouterr()
     assert exit_code == 1
     assert "missing-final-gate" in captured.err
@@ -474,3 +553,20 @@ def test_cli_rejects_invalid_limits(argument, message, capsys) -> None:
         main(argument)
     assert exc.value.code == 2
     assert message in capsys.readouterr().err
+
+
+def test_minimum_task_and_question_counts_are_configurable() -> None:
+    report = run()
+    assert report.ok
+    report = validate_texts(
+        valid_texts()["prd"],
+        valid_texts()["tasks"],
+        spec_text=valid_texts()["spec"],
+        plan_text=valid_texts()["plan"],
+        agents_text=valid_texts()["agents"],
+        readme_text=valid_texts()["readme"],
+        min_tasks=10,
+        min_questions=9,
+    )
+    assert "insufficient-tasks" in codes(report)
+    assert "insufficient-interview" in codes(report)

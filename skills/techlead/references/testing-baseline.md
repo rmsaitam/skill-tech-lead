@@ -1,11 +1,11 @@
 # Testing Baseline
 
-Use this reference when writing the testing strategy and the coverage task. Adapt the commands to the selected stack. The coverage gate is at least 80 percent unless the user explicitly approves a documented exception.
+Use this reference when writing the testing strategy in the SPEC and the coverage task in the TASKS. Adapt the commands to the selected stack. The coverage gate is at least 80 percent unless the user explicitly approves a documented exception.
 
 ## Coverage rules
 
 - Measure line and branch coverage.
-- Exclude generated code, vendor code, and bootstrap code only when the exclusion is justified in the PRD.
+- Exclude generated code, vendor code, and bootstrap code only when the exclusion is justified in the SPEC.
 - Do not exclude difficult business logic to reach the gate.
 - Fail CI when total coverage is below 80 percent.
 - Add focused tests for new logic before or with the implementation.
@@ -77,7 +77,7 @@ gradle test jacocoTestReport
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-The PRD must name the real command. The TASKS coverage task must use the same command.
+The SPEC must name the real command. The TASKS coverage task must use the same command.
 
 ## CI gates
 
