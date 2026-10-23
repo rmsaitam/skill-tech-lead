@@ -3,7 +3,7 @@ name: techlead
 description: Run a structured brainstorming interview and produce a traceable PRD.md, SPEC.md, PLAN.md, TASKS.md, AGENTS.md, and README.md. Use when the user asks for a tech lead, product requirements, architecture specification, launch plan, milestones, task breakdown, issue-ready tickets, a PRD, a SPEC, an implementation plan, or wants to turn an idea into executable engineering work with Docker environments and a test coverage gate of at least 80 percent.
 license: MIT
 metadata:
-  author: TechLead contributors
+  author: Reginaldo (rmsaitam)
   version: "0.2.0"
 ---
 
